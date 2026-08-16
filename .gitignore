@@ -1,0 +1,55 @@
+# ── Python ──
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Jupyter ──
+.ipynb_checkpoints/
+
+# ── Hydra / W&B run outputs ──
+outputs/
+multirun/
+wandb/
+
+# ── Simulation artifacts (large, regenerable) ──
+data/
+results/
+checkpoints/
+*.vtk
+*.vtu
+*.vtp
+*.usd
+*.usda
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# ── Profiling reports (capture remotely, rsync down, view locally) ──
+*.nsys-rep
+*.ncu-rep
+*.qdrep
+*.sqlite
+
+# ── Renders ──
+*.mp4
+*.png
+*.gif
+!docs/**/*.png     # but DO commit figures used in the README/writeup
+
+# ── OS / editor ──
+.DS_Store
+.vscode/
+.idea/
+
+# ── Secrets ──
+.env
+*.pem

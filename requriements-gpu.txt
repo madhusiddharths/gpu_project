@@ -1,0 +1,8 @@
+# ── CUDA-only. NEVER install these on macOS; they have no arm64 wheels. ──
+# Install on the remote box AFTER requirements.txt:
+#   pip install -r requirements.txt
+#   pip install -r requirements-gpu.txt --extra-index-url https://pypi.nvidia.com
+
+cupy-cuda12x>=13.0      # zero-copy interop with Warp arrays (Phase 6)
+cudf-cu12>=24.06        # on-device tabular summaries (Phase 6)
+nvtx>=0.2               # named ranges in Nsight timelines (Phase 7)
