@@ -1,0 +1,7 @@
+# Simple axis-aligned box — Phase 1 boundary condition.
+name: box
+
+bounds_min: [0.0, 0.0, 0.0]      # m
+bounds_max: [0.1, 0.1, 0.1]      # m
+
+gravity: [0.0, 0.0, -9.81]       # m/s^2

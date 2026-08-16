@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────
+# APPLICATION MATERIAL — uncoated placebo tablet core.
+#
+# Standard round biconvex compact, microcrystalline-cellulose
+# based. This is the material the coating study runs on
+# (Phases 5-8) and the one the process recommendation refers to.
+#
+# Phase 1-3: represented as an equivalent-volume sphere.
+# Phase 4:   replaced by a glued-sphere biconvex assembly.
+# ─────────────────────────────────────────────────────────────
+
+name: tablet_placebo
+role: application
+
+density: 1250.0            # kg/m^3 — apparent density of the compact,
+                           # not the true density of the powder
+
+shape:
+  type: biconvex           # physical shape
+  diameter: 0.0095         # m  (9.5 mm — a common commercial size)
+  thickness: 0.0045        # m  (4.5 mm total, band + two caps)
+  band_thickness: 0.0030   # m  (cylindrical band height)
+  # Sphere-equivalent radius used before Phase 4.
+  # Matched on VOLUME, not diameter — matching diameter would
+  # roughly double the mass and wreck the bed dynamics.
+  radius: 0.0037           # m
+
+contact:
+  youngs_modulus: 5.0e6    # Pa — SCALED. MCC compacts are ~1-10 GPa.
+  youngs_modulus_true: 4.0e9
+  poisson_ratio: 0.30
+  restitution: 0.60        # tablet-tablet; lower than glass, compacts
+                           # dissipate energy internally
+  friction_particle: 0.40  # uncoated cores are rough
+  friction_wall: 0.30      # against stainless drum wall
+  rolling_friction: 0.05   # higher than spheres — flat faces resist rolling
+
+coating:
+  enabled: true
+  initial_mass: 0.0        # kg per tablet
+  # Coating solids deposition; set in the spray config (Phase 5)
+
+source: "TODO — fill during Phase 0 literature review"

@@ -1,0 +1,19 @@
+defaults:
+  - material: glass_beads
+  - geometry: box
+  - _self_
+
+# Device: "auto" | "cpu" | "cuda:0"
+# This is the ONLY place a device is chosen. See src/warp_dem/device.py.
+device: auto
+
+seed: 0
+
+run:
+  name: unnamed
+  steps: 1000
+  output_every: 100
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${run.name}

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Lint
+        run: ruff check src tests scripts
+
+      - name: Test (CPU backend)
+        run: pytest tests -v
+
+      - name: Guard against hardcoded devices
+        run: |
+          if grep -rn --include='*.py' -E 'device\s*=\s*["'\'']cuda' src/ scripts/ \
+             | grep -v 'src/warp_dem/device.py'; then
+            echo "::error::Hardcoded CUDA device found outside device.py"
+            exit 1
+          fi

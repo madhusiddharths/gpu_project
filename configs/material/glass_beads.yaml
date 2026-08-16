@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────
+# VALIDATION MATERIAL — not the application material.
+# Soda-lime glass beads are the DEM community's calibration
+# standard: monodisperse, near-spherical, non-cohesive, and
+# extensively characterised in published experiments.
+#
+# Used ONLY in Phase 3 (angle of repose, Beverloo hopper flow,
+# rotating-drum flow regimes). Never used for coating studies.
+# ─────────────────────────────────────────────────────────────
+
+name: glass_beads
+role: validation
+
+density: 2500.0            # kg/m^3
+radius: 0.002              # m (2 mm)
+
+shape:
+  type: sphere
+
+contact:
+  youngs_modulus: 5.0e6    # Pa — SCALED. True value ~6.8e10.
+                           # See docs/stiffness_scaling.md
+  youngs_modulus_true: 6.8e10
+  poisson_ratio: 0.20
+  restitution: 0.90
+  friction_particle: 0.25
+  friction_wall: 0.35
+  rolling_friction: 0.01
+
+# Every number above must trace to a citation before Phase 3.
+source: "TODO — fill during Phase 0 literature review"

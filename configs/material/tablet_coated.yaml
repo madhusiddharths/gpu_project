@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────
+# Film-coated tablet. Same core, different surface.
+#
+# Coating changes flow behaviour: the film is smoother than the
+# core, so friction drops as a batch progresses. Whether this
+# matters enough to model is itself a finding worth reporting.
+# ─────────────────────────────────────────────────────────────
+
+defaults:
+  - tablet_placebo
+
+name: tablet_coated
+role: application
+
+contact:
+  restitution: 0.65
+  friction_particle: 0.25   # film is markedly smoother than the core
+  friction_wall: 0.22
+  rolling_friction: 0.04
+
+source: "TODO — fill during Phase 0 literature review"
