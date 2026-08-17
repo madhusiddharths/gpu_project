@@ -17,7 +17,7 @@ class DeviceError(RuntimeError):
     """Raised when a requested device is unavailable or malformed."""
 
 
-def resolve_device(name: str = "auto") -> "wp.context.Device":
+def resolve_device(name: str = "auto") -> wp.context.Device:
     """Turn a config string into a Warp device object.
 
     Args:
@@ -60,7 +60,7 @@ def resolve_device(name: str = "auto") -> "wp.context.Device":
         ) from exc
 
 
-def describe_device(device: "wp.context.Device") -> str:
+def describe_device(device: wp.context.Device) -> str:
     """One-line human-readable summary, for logs and benchmark provenance."""
     if device.is_cuda:
         return (
@@ -71,7 +71,7 @@ def describe_device(device: "wp.context.Device") -> str:
     return f"CPU device '{device.name}'"
 
 
-def assert_same_device(*arrays: wp.array) -> "wp.context.Device":
+def assert_same_device(*arrays: wp.array) -> wp.context.Device:
     """Guard: all arrays must live on one device. Returns that device.
 
     Cross-device array access is a class of bug that produces either a crash

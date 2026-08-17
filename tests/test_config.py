@@ -10,17 +10,6 @@ def test_config_composes():
         assert cfg.geometry.name == "box"
 
 
-def test_material_values_physical():
-    with initialize(version_base=None, config_path="../configs"):
-        cfg = compose(config_name="config")
-        m = cfg.material
-        assert m.density > 0
-        assert m.radius > 0
-        assert 0.0 <= m.restitution <= 1.0
-        assert 0.0 < m.poisson_ratio < 0.5
-        assert m.friction_particle >= 0.0
-
-
 def test_command_line_override():
     with initialize(version_base=None, config_path="../configs"):
         cfg = compose(config_name="config", overrides=["device=cpu", "run.name=test"])

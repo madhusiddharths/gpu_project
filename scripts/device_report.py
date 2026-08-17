@@ -16,7 +16,7 @@ import json
 import platform
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import warp as wp
@@ -82,7 +82,7 @@ def package_versions() -> dict:
 def collect() -> dict:
     wp.init()
     return {
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "timestamp_utc": datetime.now(UTC).isoformat(),
         "host": {
             "hostname": platform.node(),
             "system": platform.system(),
