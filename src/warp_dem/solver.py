@@ -11,6 +11,7 @@ import warp as wp
 
 from warp_dem.integrate import initialise_forces, kick, kick_drift
 from warp_dem.state import ParticleState
+from warp_dem.timestep import TimestepBudget, assert_timestep_valid
 
 
 class Solver:
@@ -25,11 +26,22 @@ class Solver:
         state: ParticleState,
         dt: float,
         gravity: tuple[float, float, float] = (0.0, 0.0, -9.81),
+        budget: TimestepBudget | None = None,
     ):
+        """
+        Args:
+            budget: stability bounds from timestep.compute_budget. Optional
+                because the Rayleigh and Hertz criteria bound CONTACT
+                resolution; a ballistic run has no contacts and no bound. From
+                Block 9, when contacts exist, every physical run passes one.
+        """
         if dt <= 0.0:
             raise ValueError(f"dt must be positive, got {dt}")
+        if budget is not None:
+            assert_timestep_valid(dt, budget)
 
         self.state = state
+        self.budget = budget
         self.dt = float(dt)
         self.gravity = wp.vec3f(*(float(g) for g in gravity))
         self.time = 0.0

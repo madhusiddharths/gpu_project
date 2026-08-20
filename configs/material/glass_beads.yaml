@@ -18,8 +18,23 @@ shape:
   type: sphere
 
 contact:
-  youngs_modulus: 5.0e6    # Pa — SCALED. True value ~6.8e10.
-                           # See docs/stiffness_scaling.md
+  # STIFFNESS-SCALED. Real soda-lime glass is ~6.8e10 Pa; this is 680x softer.
+  #
+  # Why: the timestep is bounded by the Rayleigh criterion (t ~ E^-1/2) and the
+  # Hertz contact duration (t ~ E^-2/5). At real stiffness dt = 0.41 us, i.e.
+  # 24.4 million steps for 10 s of physical time. At 1.0e8 Pa dt = 6.64 us,
+  # i.e. 1.5 million steps -- a 16x reduction in cost.
+  #
+  # Why not softer: at 5.0e6 Pa (the value used before Block 8) a particle at
+  # the base of a 50-deep pile overlaps by 2.6% of its radius, violating
+  # Validation Target 5 (delta/R < 1%). A measurably soft bed slumps flatter,
+  # which is the single most common cause of a failed repose validation.
+  # At 1.0e8 Pa the same load gives 0.35%.
+  #
+  # This is a JUSTIFIED choice, not a VALIDATED one. Target 5 validates it, by
+  # requiring the reported quantities to be insensitive to the scaling across
+  # the range used. See docs/timestep_and_stiffness.md.
+  youngs_modulus: 1.0e8    # Pa (scaled; real glass ~6.8e10)
   youngs_modulus_true: 6.8e10
   poisson_ratio: 0.20
   restitution: 0.90
