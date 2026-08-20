@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import warp as wp
 
-from warp_dem.integrate import apply_body_force, kick, kick_drift
+from warp_dem.integrate import initialise_forces, kick, kick_drift
 from warp_dem.state import ParticleState
 
 
@@ -41,16 +41,16 @@ class Solver:
         self.compute_forces()
 
     def compute_forces(self) -> None:
-        """Evaluate all forces at the current positions.
+        """Evaluate all forces and torques at the current positions.
 
-        apply_body_force ASSIGNS, so it must stay first. Contact kernels added
+        initialise_forces ASSIGNS, so it must stay first. Contact kernels added
         later accumulate and go after it.
         """
         s = self.state
         wp.launch(
-            apply_body_force,
+            initialise_forces,
             dim=s.n,
-            inputs=[s.force, s.mass, self.gravity],
+            inputs=[s.force, s.torque, s.mass, self.gravity],
             device=s.device,
         )
 
@@ -59,14 +59,22 @@ class Solver:
         wp.launch(
             kick_drift,
             dim=s.n,
-            inputs=[s.pos, s.vel, s.force, s.inv_mass, self.dt],
+            inputs=[
+                s.pos, s.vel, s.force, s.inv_mass,
+                s.orient, s.omega, s.torque, s.inv_inertia,
+                self.dt,
+            ],
             device=s.device,
         )
         self.compute_forces()
         wp.launch(
             kick,
             dim=s.n,
-            inputs=[s.vel, s.force, s.inv_mass, self.dt],
+            inputs=[
+                s.vel, s.force, s.inv_mass,
+                s.omega, s.torque, s.inv_inertia,
+                self.dt,
+            ],
             device=s.device,
         )
         self.time += self.dt

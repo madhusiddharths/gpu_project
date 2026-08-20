@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 import warp as wp
 
-from warp_dem.precision import np_scalar, scalar, vec3
+from warp_dem.precision import np_scalar, quat, scalar, vec3
 
 
 @dataclass
@@ -27,7 +27,14 @@ class ParticleState:
     host-side copy: ``.numpy()`` on any field is an explicit device-to-host
     transfer and must never appear inside a simulation loop.
 
-    Orientation and angular velocity arrive in Block 7.
+    Inertia is stored as a SCALAR, not a tensor. That is exact for a sphere,
+    whose mass distribution is identical about every axis, and it is what makes
+    world-frame angular velocity valid here: for an isotropic body the
+    gyroscopic coupling term (omega x I.omega) vanishes identically.
+
+    PHASE 4 WILL BREAK THIS. A glued-sphere tablet has a genuine inertia
+    tensor, constant only in the body frame, and requires Euler's equations
+    with the gyroscopic term plus a world<->body transform each step.
     """
 
     n: int
@@ -40,6 +47,13 @@ class ParticleState:
     radius: wp.array    # float32   [m]
     mass: wp.array      # float32   [kg]
     inv_mass: wp.array  # float32   [1/kg]
+
+    orient: wp.array       # wp.quatf, unit, body -> world
+    omega: wp.array        # wp.vec3f, rad/s, WORLD frame
+    torque: wp.array       # wp.vec3f, N.m, world frame
+
+    inertia: wp.array      # float32, kg.m^2  -- SCALAR, isotropic
+    inv_inertia: wp.array  # float32, 1/(kg.m^2)
 
     @classmethod
     def allocate(
@@ -66,6 +80,10 @@ class ParticleState:
         volume = (4.0 / 3.0) * np.pi * r.astype(np.float64) ** 3
         m = (density * volume).astype(np_scalar)
 
+        moment = (0.4 * m * r**2).astype(np_scalar)  # (2/5) m r^2, solid sphere
+
+        identity = np.zeros((n, 4), dtype=np_scalar)
+        identity[:, 3] = 1.0  # (x, y, z, w): w = 1 is the identity rotation
         return cls(
             n=n,
             device=device,
@@ -75,6 +93,11 @@ class ParticleState:
             radius=wp.array(r, dtype=scalar, device=device),
             mass=wp.array(m, dtype=scalar, device=device),
             inv_mass=wp.array((1.0 / m).astype(np_scalar), dtype=scalar, device=device),
+            orient=wp.array(identity, dtype=quat, device=device),
+            omega=wp.zeros(n, dtype=vec3, device=device),
+            torque=wp.zeros(n, dtype=vec3, device=device),
+            inertia=wp.array(moment, dtype=scalar, device=device),
+            inv_inertia=wp.array((1.0 / moment).astype(np_scalar), dtype=scalar, device=device),
         )
 
     def set_positions(self, values) -> None:
@@ -102,3 +125,34 @@ class ParticleState:
     def forces(self) -> np.ndarray:
         """Device-to-host read. Diagnostics and tests only."""
         return self.force.numpy()
+
+    def set_angular_velocities(self, values) -> None:
+        """Host-to-device write. Setup only — never inside a loop."""
+        self.omega.assign(self._as_vec3_array(values))
+
+    def set_orientations(self, values) -> None:
+        """Host-to-device write. Input is normalised; near-zero input is rejected.
+
+        Silently normalising is the right call: users supply axis-angle results
+        or hand-written quaternions that are unit to five digits, and refusing
+        those would be pedantry. A zero-length quaternion is a real error.
+        """
+        arr = np.asarray(values, dtype=np.float64)
+        if arr.shape != (self.n, 4):
+            raise ValueError(f"expected shape ({self.n}, 4), got {arr.shape}")
+        norms = np.linalg.norm(arr, axis=1, keepdims=True)
+        if np.any(norms < 1e-8):
+            raise ValueError("quaternion with near-zero length has no orientation")
+        self.orient.assign((arr / norms).astype(np_scalar))
+
+    def orientations(self) -> np.ndarray:
+        """Device-to-host read. Diagnostics and tests only."""
+        return self.orient.numpy()
+
+    def angular_velocities(self) -> np.ndarray:
+        """Device-to-host read. Diagnostics and tests only."""
+        return self.omega.numpy()
+
+    def torques(self) -> np.ndarray:
+        """Device-to-host read. Diagnostics and tests only."""
+        return self.torque.numpy()

@@ -27,6 +27,11 @@ vec3 = wp.vec3f
 #: Scalar field type for radius, mass, inverse mass, timestep.
 scalar = wp.float32
 
+#: Orientation type. Warp quaternions are ordered (x, y, z, w) with the SCALAR
+#: COMPONENT LAST. Roughly half the libraries in existence put it first; mixing
+#: the two produces rotations that are wrong in ways that look almost right.
+quat = wp.quatf
+
 #: Matching host-side dtype.
 np_scalar = np.float32
 
@@ -34,16 +39,24 @@ np_scalar = np.float32
 EPS = float(np.finfo(np_scalar).eps)
 
 
-def accumulation_bound(max_coord: float, steps: int) -> float:
-    """Worst-case position drift from repeated addition, in metres.
+def accumulation_bound(magnitude: float, additions: int) -> float:
+    """Worst-case drift from repeated addition into a float32 accumulator.
 
-    Each add of a small increment to a coordinate of magnitude |x| rounds by at
-    most 0.5 * ulp(x) = 0.5 * EPS * |x|. Summing that over `steps` additions and
-    taking the largest coordinate reached gives a rigorous upper bound. It is
-    loose by roughly 1-2 orders of magnitude in practice because not every
-    rounding is worst-case and not all share a sign, but it is a bound, so a
-    test written against it cannot fail spuriously.
+    Each add of a small increment to an accumulator of magnitude |a| rounds by
+    at most 0.5 * ulp(a) = 0.5 * EPS * |a|. Summing that over `additions` gives
+    a rigorous upper bound. Loose by 1-2 orders in practice because not every
+    rounding is worst-case and not all share a sign, but it IS a bound, so a
+    test written against it cannot fail spuriously across platforms.
+
+    Args:
+        magnitude: the largest value the accumulator reaches, in its own units.
+                   NOT the distance travelled — rounding scales with ulp(a),
+                   which scales with |a|.
+        additions: the number of accumulating adds, which is NOT always the
+                   number of timesteps. Velocity-Verlet updates position once
+                   per step (the drift) but velocity TWICE (two half-kicks), so
+                   a velocity bound takes 2 * steps.
 
     Used by the integrator tests and, from Block 17, by the overlap diagnostics.
     """
-    return 0.5 * EPS * abs(max_coord) * steps
+    return 0.5 * EPS * abs(magnitude) * additions

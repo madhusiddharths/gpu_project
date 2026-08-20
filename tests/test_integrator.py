@@ -87,8 +87,17 @@ def test_free_fall_matches_analytic_trajectory(device):
     state = _drop(device, x0, v0, dt, steps)
 
     a = np.array(G, dtype=np.float64)
-    np.testing.assert_allclose(state.positions(), x0 + v0 * t + 0.5 * a * t**2, atol=1e-6)
-    np.testing.assert_allclose(state.velocities(), v0 + a * t, atol=1e-5)
+    x_exact = x0 + v0 * t + 0.5 * a * t**2
+    v_exact = v0 + a * t
+
+    # Position: one accumulating add per step (the drift).
+    # Velocity: two per step (both half-kicks). Different magnitude, different
+    # addition count, therefore a separately derived bound.
+    tol_x = accumulation_bound(float(np.max(np.abs(x_exact))), steps)
+    tol_v = accumulation_bound(float(np.max(np.abs(v_exact))), 2 * steps)
+
+    np.testing.assert_allclose(state.positions(), x_exact, atol=tol_x)
+    np.testing.assert_allclose(state.velocities(), v_exact, atol=tol_v)
 
 
 @pytest.mark.parametrize("dt", [1e-3, 1e-4, 1e-5])
@@ -150,6 +159,10 @@ def test_zero_gravity_is_straight_line(device):
     )
     np.testing.assert_allclose(
         state.positions()[0], np.array([0.1, -0.2, 0.05]), atol=1e-6
+    )
+    exact = np.array([0.1, -0.2, 0.05])
+    np.testing.assert_allclose(
+        state.positions()[0], exact, atol=accumulation_bound(0.2, 100)
     )
 
 
