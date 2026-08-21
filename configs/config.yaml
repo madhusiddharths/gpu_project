@@ -14,6 +14,44 @@ run:
   steps: 1000
   output_every: 100
 
+  # Number of particles placed on a jittered lattice inside geometry.bounds.
+  # Placement FITS the domain and fails loudly if it cannot; see packing.py.
+  n_particles: 512
+
+  # Timestep in seconds. null derives it from the Rayleigh and Hertz criteria
+  # for the selected material, which is the right default: a hand-set dt that
+  # violates the bound produces a plausible-looking bed that is quietly wrong.
+  # An explicit value is still checked against the bound and fails loudly.
+  dt: null
+
+  # Largest relative impact speed expected, in m/s. Feeds the Hertz criterion.
+  # Assuming too low a value silently inflates the allowed timestep, so this is
+  # a required judgement, not a detail.
+  impact_velocity: 1.0
+
+  # Timesteps demanded inside one collision. 25 is MEASURED, not assumed:
+  # docs/timestep_and_stiffness.md records the restitution error it delivers.
+  hertz_steps: 25
+
+  # Lattice pitch in particle radii, and random displacement as a fraction of
+  # radius. Must stay above 2 + 2*jitter or neighbours overlap on creation.
+  spacing_factor: 2.4
+  jitter: 0.05
+  drop_height: 2.0
+
+contacts:
+  # Contact slots per particle, for the tangential-history store. Sized against
+  # the FULL coordination number, not half of it: a particle that is the lowest
+  # index among its neighbours holds every one of its contacts.
+  slots_per_particle: 16
+
+  # Reading the contact counter back to the host forces a device sync every
+  # step. Correct for development; a production loop should check every N steps.
+  check_overflow: true
+
 hydra:
   run:
+    # Restored after the Block 18 rewrite dropped it: without this, run
+    # directories are timestamps with no run.name, so two runs are
+    # indistinguishable in a listing.
     dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}_${run.name}

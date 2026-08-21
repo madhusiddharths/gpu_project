@@ -74,3 +74,130 @@ that is an argument, not a measurement.
 3. If drift proves material, the standard mitigation is to store positions
    relative to a cell or domain origin so |x| stays small, which shrinks ulp
    without widening the type.
+---
+
+## Catastrophic cancellation in contact overlap (Block 10)
+
+A second, independent float32 effect, unrelated to the accumulation drift above.
+Accumulation drift grows with step count; this one is present on step one.
+
+### The observation
+
+The static Hertz force test failed at δ/R = 1e-4 with 1.76e-3 relative error,
+while the same code at δ/R = 1e-3 and 1e-2 passed at 2e-4. **The error scales as
+1/δ.**
+
+### Mechanism
+
+```
+δ = (r_i + r_j) − |x_j − x_i|
+```
+
+subtracts two lengths of order 4e-3 m to leave one of order 2e-7 m. Each operand
+carries absolute error up to `ulp = EPS·|x|`; subtraction preserves that absolute
+error while destroying almost all the significant digits. Relative precision of
+the result is therefore inflated by `magnitude / difference`:
+
+```
+relative error in δ  ≈  EPS · 2R / δ
+relative error in F  ≈  1.5 · EPS · 2R / δ        (F ~ δ^1.5)
+```
+
+Predicted 3.6e-3 at δ/R = 1e-4; observed 1.8e-3. The bound holds with ~2x margin.
+
+Confirmed not to be a solver defect: a bug would not scale with contact depth,
+and the deeper contacts were accurate to 1/10 and 1/100 of the error.
+
+### Bound
+
+`cancellation_bound(magnitude, difference, exponent) = exponent · EPS · magnitude / difference`
+
+Companion to `accumulation_bound`, and used the same way — tests derive their
+tolerance rather than declaring one. Used in `tests/test_hertz.py`.
+
+### Two consequences
+
+1. **Contact force precision degrades as contacts get shallower**, and stiffer
+   materials have shallower contacts. Stiffness scaling therefore has a second,
+   quieter cost alongside the timestep: it makes contact forces noisier. A
+   barely-touching contact is the least accurately resolved one in the bed.
+2. **The mitigation is the same as for accumulation drift** — store coordinates
+   relative to a cell or domain origin so |x| stays small, shrinking ulp without
+   widening the type. That one change addresses both effects, which strengthens
+   the case for it in Phase 7.
+
+---
+
+## Correlation length measured — the §5.1 question, answered (Block 17)
+
+The section above leaves the decisive question open: are successive roundings
+correlated? `scripts/drift_probe.py` measures it.
+
+### Method
+
+Rather than a float64 reference run (see below for why not), measure the
+**correlation length** L — the mean number of steps a velocity component keeps
+its sign. If roundings stay correlated over runs of L steps, the drift is a
+random walk over N/L runs of size L·δ:
+
+```
+drift ~ delta * L * sqrt(N/L) = delta * sqrt(L*N)
+```
+
+Enhancement over the fully decorrelated estimate is therefore **sqrt(L)**. The
+model reduces correctly to both limits (L = 1 gives sqrt(N); L = N gives N); the
+middle is an interpolation rather than a theorem.
+
+### Result — the optimistic reading does NOT survive
+
+128 particles poured into a box, 30,000 steps, M3 Pro CPU backend:
+
+```
+mean velocity sign-run : 721.5 steps  (2.4% of the run)
+sqrt(L)                : 26.9x
+```
+
+Extrapolated to drum geometry (|x| <= 0.15 m, 1e6 steps, ~20 um overlap):
+
+| case | drift | vs overlap |
+|---|---|---|
+| fully correlated (worst case) | 8940 um | 447x |
+| **measured correlation length** | **240 um** | **12x** |
+| fully decorrelated | 8.9 um | 0.45x |
+
+**Drift lands 12x ABOVE the contact overlap.** Velocities do not reverse every
+step; they reverse every ~721 steps, and sqrt(721) is most of the way from the
+good case to the bad one.
+
+**A drum is likely WORSE.** The measurement above is a settling transient. In a
+drum a particle rides up with the wall at near-constant velocity before
+avalanching, so its correlation length is set by the circulation period — of
+order 1 s, or 150,000 steps at dt = 6.6 us. Treat 12x as a lower bound.
+
+### Revised action
+
+The mitigation moves **from Phase 7 to Phase 5**: store positions relative to a
+cell or domain origin so |x| stays small. This shrinks ulp without widening the
+type, so it costs no extra bandwidth — which matters because the performance
+claim rests on staying memory-bound. It also fixes the Block 10 cancellation
+finding, since both are consequences of large coordinates.
+
+Superseded: the earlier note that "the realistic case is near the decorrelated
+end". That was an argument; this is a measurement, and it disagrees.
+
+---
+
+## Correction: flipping precision is NOT a one-line change (Block 17)
+
+`precision.py` gained a `WARP_DEM_PRECISION` environment override, and it does
+switch every array dtype, kernel annotation and host-side NumPy dtype correctly.
+It does **not** yield a working float64 solver.
+
+Warp pins bare float literals in kernel bodies to float32 and then refuses to mix
+them with float64 operands. `half = 0.5 * dt` fails as soon as `dt` is a double;
+fixing `integrate.py` moved the failure to `forces.py`, and it cascades — every
+literal in every kernel needs an explicit `scalar()` cast.
+
+The architectural claim (one place decides precision) holds. The convenience
+claim (one line) does not. Remaining work is mechanical, and belongs to the
+Phase 7 mixed-precision experiment.

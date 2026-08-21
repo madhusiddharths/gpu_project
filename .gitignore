@@ -53,3 +53,15 @@ checkpoints/
 # ── Secrets ──
 .env
 *.pem
+# ── Docs ──
+# Added at the user's request (Block 10-18 pass).
+# CAVEAT: docs/precision.md, docs/timestep_and_stiffness.md, docs/trade_deck.md,
+# docs/validation_targets.md and docs/handoff/handoff_phase0.md are ALREADY
+# TRACKED. .gitignore only suppresses UNTRACKED files, so those five continue to
+# appear in commits and to receive updates normally. Only new files under docs/
+# — the per-block write-ups and the new handoff — are ignored.
+# To untrack the existing five:  git rm --cached -r docs/
+# Note also that the `!docs/**/*.png` negation above is now inert: git does not
+# descend into an ignored directory, so a negation cannot re-include a file
+# inside one.
+docs/

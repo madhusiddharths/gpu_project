@@ -91,7 +91,7 @@ def kick_drift(
     """First half-kick on both velocities using the OLD force and torque,
     then the full-step drift of position and orientation."""
     i = wp.tid()
-    half = 0.5 * dt
+    half = scalar(0.5) * dt
 
     v_half = vel[i] + force[i] * inv_mass[i] * half
     vel[i] = v_half
@@ -114,6 +114,6 @@ def kick(
 ):
     """Second half-kick using the NEW force and torque."""
     i = wp.tid()
-    half = 0.5 * dt
+    half = scalar(0.5) * dt
     vel[i] = vel[i] + force[i] * inv_mass[i] * half
     omega[i] = omega[i] + torque[i] * inv_inertia[i] * half

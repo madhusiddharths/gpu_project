@@ -65,3 +65,53 @@ Phase 3: repeat the repose measurement at 1e8, 3e8 and 1e9 Pa and show the
 angle changes by less than the experimental uncertainty (+/- 0.8 deg, Sunday et
 al. 2020). If it moves, the scaling is too aggressive and the timestep budget
 has to be paid.
+---
+
+## Steps per collision — measured, Block 10
+
+`compute_budget(..., hertz_steps=N)` demands N timesteps inside one collision.
+25 was a convention carried from the literature. Measured relative error in
+coefficient of restitution, head-on two-sphere collisions at 1 m/s, glass beads
+at E = 1e8 Pa:
+
+| e_in | spc=10 | spc=15 | spc=25 | spc=50 | spc=100 |
+|---|---|---|---|---|---|
+| 0.50 | 0.933% | 0.933% | 1.323% | 0.084% | 0.163% |
+| 0.70 | 1.729% | 1.729% | 0.771% | 0.323% | 0.144% |
+| 0.90 | 0.411% | 0.411% | 0.080% | 0.057% | 0.058% |
+| 0.97 | 0.162% | 0.162% | 0.043% | 0.011% | 0.003% |
+
+**spc=10 and spc=15 are identical because the Rayleigh bound clamps dt.** At
+E = 1e8 Pa the Rayleigh limit is 10.71 us and t_c/10 would be 16.60 us, so a
+request for 10 steps per collision silently delivers 15. `budget.limit` — the
+min of the two bounds — is the only correct thing to hand a Solver;
+`budget.hertz_limit` alone is a bug, and `assert_timestep_valid` caught exactly
+that mistake when this script was first written.
+
+### The error is contact PHASE, not float32
+
+Shifting the initial gap by a fraction of one `v*dt` step moves where in the
+timestep contact begins:
+
+| e | spc | spread in measured e across phase |
+|---|---|---|
+| 0.50 | 25 | 0.0118 |
+| 0.50 | 50 | 0.0040 |
+| 0.70 | 25 | 0.0091 |
+| 0.90 | 25 | 0.0007 |
+
+The spread exceeds the error at any single phase, so phase — not arithmetic — is
+the dominant term. A collision begins mid-step, so the first overlap is quantised
+by `v*dt`; fewer steps per collision misresolves a larger fraction of the entry
+and exit, and low `e` amplifies it because damping dominates the force there.
+
+### Decision
+
+**`hertz_steps` stays at 25.** Worst case 1.32% against a 2% target is a 1.5x
+margin, but that worst case is e = 0.50, which this project never simulates. The
+materials actually used sit far from it: glass beads (e = 0.90) give **0.08%**,
+tablet placebo (e = 0.60) roughly 1%. Moving to 50 would double the step count
+for every run in the project to buy margin at a restitution never used.
+
+Revisit if a future material has e below 0.6, or if Phase 3 validation shows
+sensitivity to it.

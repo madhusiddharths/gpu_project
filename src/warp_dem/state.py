@@ -100,6 +100,49 @@ class ParticleState:
             inv_inertia=wp.array((1.0 / moment).astype(np_scalar), dtype=scalar, device=device),
         )
 
+    def set_fixed(self, indices) -> None:
+        """Pin particles in place by giving them infinite mass and inertia.
+
+        Sets ``inv_mass`` and ``inv_inertia`` to zero for the given indices,
+        which is why those reciprocals are stored rather than the mass itself:
+        infinity is not representable, but its reciprocal is exactly zero, and
+        zero times any finite force is exactly zero. A pinned particle still
+        receives forces and still exerts them — it simply never accelerates.
+
+        No branch is added to any kernel. The integrator multiplies by
+        ``inv_mass`` unconditionally, so pinning costs nothing at runtime and
+        introduces no warp divergence.
+
+        Used for fixed bases in two-body tests before walls exist (Block 15),
+        and available afterwards for any immovable body.
+        """
+        inv_m = self.inv_mass.numpy().copy()
+        inv_i = self.inv_inertia.numpy().copy()
+        idx = np.atleast_1d(np.asarray(indices, dtype=np.int64))
+        if idx.size and (idx.min() < 0 or idx.max() >= self.n):
+            raise IndexError(f"indices must lie in [0, {self.n}), got {indices}")
+        inv_m[idx] = 0.0
+        inv_i[idx] = 0.0
+        self.inv_mass.assign(inv_m)
+        self.inv_inertia.assign(inv_i)
+
+    def set_rotation_locked(self, indices) -> None:
+        """Give particles infinite moment of inertia so they cannot spin.
+
+        Same mechanism as ``set_fixed``, applied to rotation alone: a sphere
+        that translates but cannot rotate is a BLOCK. That is exactly the body
+        the classical sliding-friction result describes — v0^2 / (2 mu g) is
+        derived for something that slides without rolling — so reproducing it
+        requires suppressing rotation rather than pretending a sphere does not
+        have it. See tests/test_walls.py.
+        """
+        inv_i = self.inv_inertia.numpy().copy()
+        idx = np.atleast_1d(np.asarray(indices, dtype=np.int64))
+        if idx.size and (idx.min() < 0 or idx.max() >= self.n):
+            raise IndexError(f"indices must lie in [0, {self.n}), got {indices}")
+        inv_i[idx] = 0.0
+        self.inv_inertia.assign(inv_i)
+
     def set_positions(self, values) -> None:
         """Host-to-device write. Setup only — never inside a loop."""
         self.pos.assign(self._as_vec3_array(values))
@@ -109,7 +152,7 @@ class ParticleState:
         self.vel.assign(self._as_vec3_array(values))
 
     def _as_vec3_array(self, values) -> np.ndarray:
-        arr = np.asarray(values, dtype=np.float32)
+        arr = np.asarray(values, dtype=np_scalar)
         if arr.shape != (self.n, 3):
             raise ValueError(f"expected shape ({self.n}, 3), got {arr.shape}")
         return arr
