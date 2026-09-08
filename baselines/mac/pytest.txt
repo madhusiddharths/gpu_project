@@ -1,0 +1,20 @@
+collected 194 items
+
+tests/test_config.py ......                                              [  3%]
+tests/test_contacts.py ............                                      [  9%]
+tests/test_device.py .......                                             [ 12%]
+tests/test_device_parity.py sssss                                        [ 15%]
+tests/test_diagnostics.py ..........                                     [ 20%]
+tests/test_energy.py ..........                                          [ 25%]
+tests/test_friction.py ............                                      [ 31%]
+tests/test_hertz.py ....................                                 [ 42%]
+tests/test_history.py ............                                       [ 48%]
+tests/test_integrator.py ...........                                     [ 54%]
+tests/test_rolling.py ...........                                        [ 59%]
+tests/test_rotation.py ...........                                       [ 65%]
+tests/test_run.py ..................                                     [ 74%]
+tests/test_timestep.py ...................                               [ 84%]
+tests/test_two_body.py ...............                                   [ 92%]
+tests/test_walls.py ...............                                      [100%]
+
+================== 189 passed, 5 skipped in 61.13s (0:01:01) ===================

@@ -1,0 +1,58 @@
+Warp 1.16.0 initialized:
+   CUDA not enabled in this build
+   Devices:
+     "cpu"      : "arm"
+   Kernel cache:
+     /Users/madhusiddharthsuthagar/Library/Caches/warp/1.16.0
+CPU device 'arm'
+working precision: float32  (EPS = 1.192e-07)
+
+=== 1. Ballistic drift (correlated increments) ===
+Zero gravity, constant velocity. Every position increment is
+identical, so roundings repeat in the same direction.
+
+    steps    |error| [m]    bound [m]     err/step   growth
+Module warp_dem.integrate 43ef051 load on device 'cpu' took 0.40 ms  (cached)
+     2500     6.6012e-06   3.7253e-05   2.6405e-09         
+     5000     1.3191e-05   8.9407e-05   2.6381e-09    2.00x
+    10000     2.6399e-05   2.3842e-04   2.6399e-09    2.00x
+    20000     9.6166e-05   7.1526e-04   4.8083e-09    3.64x
+    40000     6.3932e-04   2.3842e-03   1.5983e-08    6.65x
+
+Doubling the steps roughly doubles the error, so growth is LINEAR
+in N rather than sqrt(N). This is the correlated regime, and it is
+the case docs/precision.md calls the worst case.
+
+=== 2. Correlation length in a poured, settling bed ===
+A bed is the case that matters. If velocities reverse often, the
+roundings decorrelate and the linear growth above does not apply.
+
+Module warp_dem.contacts 0772c05 load on device 'cpu' took 0.24 ms  (cached)
+Module warp_dem.history 5706abc load on device 'cpu' took 0.12 ms  (cached)
+Module warp_dem.forces 70feac0 load on device 'cpu' took 0.11 ms  (cached)
+Module warp_dem.walls cf45d14 load on device 'cpu' took 0.12 ms  (cached)
+Module warp_dem.diagnostics d6a58eb load on device 'cpu' took 0.29 ms  (cached)
+particles                  : 128
+steps run                  : 30,000
+timestep                   : 6.639 us
+largest |coordinate|       : 0.0193 m
+mean speed, first / last   : 6.5128e-03 / 3.3813e-03 m/s
+overlap                    : contacts      290   mean delta/R  0.0449%   max delta/R  0.1699%   [Target 5: PASS]
+
+mean velocity sign-run     : 721.5 steps (2.4% of the run)
+drift enhancement over the decorrelated estimate: sqrt(L) = 26.9x
+  (fully correlated would be sqrt(N) = 173x)
+
+=== 3. Extrapolation to drum geometry ===
+|x| <= 0.15 m, 1,000,000 steps, contact overlap ~20 um
+
+                            case         drift   vs overlap
+   fully correlated (worst case)    8940.70 um     447.035x
+     measured correlation length     240.16 um      12.008x
+              fully decorrelated       8.94 um       0.447x
+
+VERDICT: drift is NOT comfortably below the contact overlap.
+Positions should move to float64, or be stored relative to a
+local origin, before Phase 5.
+
+rigorous bound helper: position_drift_bound(state, 1000000) = 8.9407e-03 m

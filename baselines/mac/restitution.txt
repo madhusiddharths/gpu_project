@@ -1,0 +1,42 @@
+Warp 1.16.0 initialized:
+   CUDA not enabled in this build
+   Devices:
+     "cpu"      : "arm"
+   Kernel cache:
+     /Users/madhusiddharthsuthagar/Library/Caches/warp/1.16.0
+CPU device 'arm'
+
+=== Relative error in restitution vs steps per collision ===
+(Validation Target 4a demands < 2%)
+
+  e_in    spc=10    spc=15    spc=25    spc=50   spc=100
+--------------------------------------------------------
+Module warp_dem.integrate 43ef051 load on device 'cpu' took 0.44 ms  (cached)
+Module warp_dem.contacts 0772c05 load on device 'cpu' took 0.12 ms  (cached)
+Module warp_dem.forces 70feac0 load on device 'cpu' took 0.17 ms  (cached)
+  0.50    0.933%    0.933%    1.323%    0.084%    0.163%
+  0.70    1.729%    1.729%    0.771%    0.323%    0.144%
+  0.90    0.411%    0.411%    0.080%    0.057%    0.058%
+  0.97    0.162%    0.162%    0.043%    0.011%    0.003%
+
+=== Steps actually spent inside the contact ===
+The 2.87 prefactor predicts the collision duration; this is what was
+delivered. A systematic shortfall means the budget is optimistic.
+
+ requested    actual     ratio
+------------------------------
+        10        15      1.50
+        15        15      1.00
+        25        25      1.00
+        50        50      1.00
+       100       100      1.00
+
+=== Velocity independence (Validation Target 4b) ===
+Spread must stay under 2% across 0.1-2.0 m/s.
+
+  e_in       0.1       0.5       1.0       2.0    spread
+--------------------------------------------------------
+  0.50   0.50661   0.50662   0.50662   0.50662    0.002%
+  0.70   0.70536   0.70540   0.70540   0.70539    0.006%
+  0.90   0.90067   0.90070   0.90072   0.90071    0.006%
+  0.97   0.97049   0.97043   0.97042   0.97042    0.008%
